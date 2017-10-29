@@ -17,7 +17,7 @@ Examples
 Declare and load scalar values
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-:: python
+.. code-block:: python
 
    from config import Config, parse_int, parse_float, parse_str, parse_bool
 
@@ -42,7 +42,7 @@ Declare and load scalar values
 Declare and load list values
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-:: python
+.. code-block:: python
 
    from config import Config, parse_int_list
 
@@ -61,7 +61,7 @@ Declare and load list values
 Declare and load nested values
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-:: python
+.. code-block:: python
 
    from config import Config, parse_str
 
@@ -84,7 +84,7 @@ Declare and load nested values
 Add validation
 ^^^^^^^^^^^^^^
 
-:: python
+.. code-block:: python
 
    from config import Config, parse_str, parse_str_list
    from validators import email
@@ -109,7 +109,7 @@ Add validation
 Reloading configuration at runtime
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-:: python
+.. code-block:: python
 
    from config import Config, parse_str, reload
 
