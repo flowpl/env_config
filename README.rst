@@ -7,7 +7,10 @@ Declare and load configuration from environment variables.
 Install
 -------
 
+.. code-block:: sh
+
    pip install config
+
 
 
 Examples
