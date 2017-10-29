@@ -17,6 +17,8 @@ Examples
 Declare and load scalar values
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+::
+
    from config import Config, parse_int, parse_float, parse_str, parse_bool
 
    cfg = Config()
@@ -40,6 +42,8 @@ Declare and load scalar values
 Declare and load list values
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+::
+
    from config import Config, parse_int_list
 
    cfg = Config()
@@ -56,6 +60,8 @@ Declare and load list values
 
 Declare and load nested values
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
 
    from config import Config, parse_str
 
@@ -77,6 +83,8 @@ Declare and load nested values
 
 Add validation
 ^^^^^^^^^^^^^^
+
+::
 
    from config import Config, parse_str, parse_str_list
    from validators import email
@@ -100,6 +108,8 @@ Add validation
 
 Reloading configuration at runtime
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
 
    from config import Config, parse_str, reload
 
