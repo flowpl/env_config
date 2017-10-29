@@ -1,0 +1,15 @@
+CHANGES
+=======
+
+* feat: switch to pbr based pypi publish workflow
+* docs: rename README file back
+* docs: rename README file
+* fix: rename project once again
+* fix: rename package main directory
+* fix: rename pypi package
+* docs: README improvements
+* docs: README improvements
+* docs: README improvements
+* docs: README improvements
+* feat: implement config loading
+* Initial commit
