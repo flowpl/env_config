@@ -1,7 +1,7 @@
 from distutils.core import setup
 setup(
-    name='config',
-    packages=['config'],
+    name='config_py',
+    packages=['config_py'],
     version='1.0',
     description='declare and load configuration from environment variables',
     author='Florian Plattner',
