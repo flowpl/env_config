@@ -1,6 +1,10 @@
 CHANGES
 =======
 
+1.2
+---
+
+* fix: adds AUTHORS and Changelog
 * feat: switch to pbr based pypi publish workflow
 * docs: rename README file back
 * docs: rename README file
