@@ -22,7 +22,7 @@ Declare and load scalar values
 
 .. code-block:: python
 
-   from config import Config, parse_int, parse_float, parse_str, parse_bool
+   from env_config import Config, parse_int, parse_float, parse_str, parse_bool
 
    cfg = Config()
 
@@ -47,7 +47,7 @@ Declare and load list values
 
 .. code-block:: python
 
-   from config import Config, parse_int_list
+   from env_config import Config, parse_int_list
 
    cfg = Config()
 
@@ -66,7 +66,7 @@ Declare and load nested values
 
 .. code-block:: python
 
-   from config import Config, parse_str
+   from env_config import Config, parse_str
 
    cfg = Config()
    cfg.declare(
@@ -89,7 +89,7 @@ Add validation
 
 .. code-block:: python
 
-   from config import Config, parse_str, parse_str_list
+   from env_config import Config, parse_str, parse_str_list
    from validators import email
 
    # config expects validators to raise an Error on failure.
@@ -114,7 +114,7 @@ Reloading configuration at runtime
 
 .. code-block:: python
 
-   from config import Config, parse_str, reload
+   from env_config import Config, parse_str, reload
 
    cfg = Config()
    cfg.declare('some_value', parse_str())
