@@ -1,2 +1,6 @@
 from setuptools import setup
-setup(setup_requires=['pbr>=3.1.1'], pbr=True)
+setup(
+    packages=['env_config'],
+    pbr=True,
+    setup_requires=['pbr>=3.1.1'],
+)
