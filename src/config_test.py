@@ -5,7 +5,7 @@ import snapshottest
 from ddt import ddt, data
 from validators import email, ValidationFailure
 
-from env_config.config import Config, ConfigValueError, parse_str, parse_int, parse_float, parse_str_list, \
+from . import Config, ConfigValueError, parse_str, parse_int, parse_float, parse_str_list, \
     parse_int_list, parse_float_list, parse_bool, parse_bool_list, ConfigParseError, ConfigMissingError, \
     AggregateConfigError
 
