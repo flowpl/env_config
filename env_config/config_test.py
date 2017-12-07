@@ -632,3 +632,25 @@ class ErrorReportingTest(ConfigTestCase, snapshottest.TestCase):
             self.config.get('undeclared')
 
         self.assertMatchSnapshot(str(context.exception))
+
+
+class ConfigEnvironmentTest(ConfigTestCase):
+
+    def test_do_not_raise_when_declaring_a_variable_in_another_environment(self):
+        self.config.declare('optional', parse_str(), ('default',), 'other')
+
+    def test_raise_declare_error_when_getting_a_variable_from_another_environment(self):
+        self.config.declare('optional', parse_str(), ('default',), 'other')
+        with self.assertRaises(ConfigValueError):
+            self.config.get('optional')
+
+    def test_do_not_raise_when_declaring_a_dict_in_another_environment(self):
+        self.config.declare('optional', {'value': parse_str()}, ('default',), 'other')
+
+    def test_raise_declare_error_when_getting_a_dict_from_another_environment(self):
+        self.config.declare('optional', {'value': parse_str()}, ('default',), 'other')
+        with self.assertRaises(ConfigValueError):
+            self.config.get('optional')
+
+    def test_do_not_raise_when_declaring_a_list_in_another_environment(self):
+        self.config.declare('optional', parse_str_list(), ('default',), 'other')

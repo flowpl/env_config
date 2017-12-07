@@ -146,7 +146,6 @@ class AggregateConfigError(ConfigError):
             result += '\n'.join(sorted(parse_errors)) + '\n\n'
         return result
 
-
     def __str__(self):
         return self.message
 
@@ -190,20 +189,23 @@ def __parse_definition_result(result):
         return result, []
 
 
-def _parse_dict(prefix, definition, defer_raise):
+def _parse_dict(prefix, definition, defer_raise, tags, current_tag):
     result = {}
     exceptions = []
     for k, v in definition.items():
         variable_name = "{}_{}".format(prefix, k)
         if isinstance(definition[k], dict):
-            result[k], ex = __parse_definition_result(_parse_dict(variable_name, definition[k], defer_raise))
+            result[k], ex = \
+                __parse_definition_result(_parse_dict(variable_name, definition[k], defer_raise, tags, current_tag))
             exceptions = exceptions + ex
         else:
             try:
                 result[k], ex = __parse_definition_result(definition[k](variable_name.upper()))
                 exceptions = exceptions + ex
             except BaseException as e:
-                if defer_raise:
+                if current_tag not in tags:
+                    result[k] = e
+                elif defer_raise:
                     exceptions.append(e)
                 else:
                     raise e
@@ -219,7 +221,7 @@ class Config(object):
         self.__exceptions = []
         self.__defer_raise = defer_raise
 
-    def declare(self, key, definition):
+    def declare(self, key, definition, tags=('default',), current_tag='default'):
         """
         declare config options
         :param key: string
@@ -228,13 +230,15 @@ class Config(object):
         """
         self.__definitions[key] = definition
         if isinstance(definition, dict):
-            self.__parsed_values[key], exceptions = _parse_dict(key, definition, self.__defer_raise)
+            self.__parsed_values[key], exceptions = _parse_dict(key, definition, self.__defer_raise, tags, current_tag)
             self.__exceptions = self.__exceptions + exceptions
         else:
             try:
                 self.__parsed_values[key] = definition(key.upper())
             except BaseException as e:
-                if self.__defer_raise:
+                if current_tag not in tags:
+                    self.__parsed_values[key] = e
+                elif self.__defer_raise:
                     self.__exceptions.append(e)
                 else:
                     raise e
@@ -244,6 +248,7 @@ class Config(object):
             self.declare(key, definition)
 
     def get(self, key):
+        value = None
         try:
             value = self.__parsed_values[key]
         except KeyError:
@@ -252,6 +257,14 @@ class Config(object):
                 self.__exceptions.append(ex)
             else:
                 raise ex
+
+        if value and isinstance(value, dict):
+            for key, val in value.items():
+                if isinstance(val, BaseException):
+                    raise val
+
+        if value and isinstance(value, BaseException):
+            raise value
 
         if self.__defer_raise and len(self.__exceptions) > 0:
             raise AggregateConfigError(self.__exceptions)

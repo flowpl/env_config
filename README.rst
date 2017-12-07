@@ -127,3 +127,56 @@ Reloading configuration at runtime
    cfg.reload()
 
    new_value = cfg.get('some_value')
+
+
+Declaring optional variables
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Sometimes you just want to load a subset of all variables. For example most applications nowadays get executed
+in a live environment and in a testing environment.
+Another example is different processes, for example a web endpoint and a background worker, sharing configuration setup.
+
+.. code-block:: python
+
+   # config.py
+
+   from env_config import Config parse_str, reload
+
+   def declare_config(tag):
+      required = ('live', 'test')
+      test_optional = ('live',)
+
+      cfg = Config()
+      # this variable is available both in live and test
+      cfg.declare('some_value', parse_str(), required, tag)
+      # this variable is only available in live. In test it won't be loaded and only raises an error when accessed.
+      cfg.declare('some_other_value', parse_str(), test_optional, tag)
+      return cfg
+
+.. code-block:: python
+
+   # live-app.py
+
+   from config import declare_config
+
+   # the active tag is 'live', so all variables tagged with 'live' are required and raise errors when missing.
+   cfg = declare_config('live')
+
+   # access variables
+   val = cfg.get('some_value')
+
+.. code-block:: python
+
+   # something_test.py
+
+   from config import declare_config
+
+   # the active tag is 'test', so all variables tagged with 'test' are required and raise errors when missing.
+   # All other variables become optional and only raise errors when accessed with
+   cfg.declare_config('test')
+
+   # access variables
+   val = cfg.get('some_value')
+
+   # raise an error, because the variable is not available in 'test'
+   val2 = cfg.get('some_other_value')
