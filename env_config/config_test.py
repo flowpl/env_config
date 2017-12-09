@@ -633,6 +633,16 @@ class ErrorReportingTest(ConfigTestCase, snapshottest.TestCase):
 
         self.assertMatchSnapshot(str(context.exception))
 
+    def test_do_not_report_the_same_error_multiple_times(self):
+        self.config.declare('err_key_1', parse_int())
+        self.config.declare('err_key_1', parse_int())
+        self.config.declare('err_key_1', parse_int())
+
+        with self.assertRaises(AggregateConfigError) as context:
+            self.config.get('undeclared')
+
+        self.assertMatchSnapshot(str(context.exception))
+
 
 class ConfigEnvironmentTest(ConfigTestCase):
 
@@ -654,3 +664,8 @@ class ConfigEnvironmentTest(ConfigTestCase):
 
     def test_do_not_raise_when_declaring_a_list_in_another_environment(self):
         self.config.declare('optional', parse_str_list(), ('default',), 'other')
+
+    def test_raise_declare_error_when_getting_a_list_from_another_environment(self):
+        self.config.declare('optional', parse_str_list(), ('default',), 'other')
+        with self.assertRaises(ConfigValueError):
+            self.config.get('optional')

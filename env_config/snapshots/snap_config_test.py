@@ -7,6 +7,14 @@ from snapshottest import Snapshot
 
 snapshots = Snapshot()
 
+snapshots['ErrorReportingTest::test_do_not_report_the_same_error_multiple_times 1'] = '''Missing environment variables:
+export ERR_KEY_1=[your value here]
+
+Missing declarations:
+declare("undeclared", [your definition here])
+
+'''
+
 snapshots['ErrorReportingTest::test_report_message_for_missing_environment_variables 1'] = '''Missing environment variables:
 export ERR_KEY_1=[your value here]
 export ERR_KEY_1_DICT2_DICT3_KEY4=[your value here]

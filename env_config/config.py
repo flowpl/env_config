@@ -121,16 +121,16 @@ class AggregateConfigError(ConfigError):
 
     @property
     def message(self):
-        missing_env_variables = []
-        missing_declarations = []
-        parse_errors = []
+        missing_env_variables = set()
+        missing_declarations = set()
+        parse_errors = set()
         for ex in self.exceptions:
             if isinstance(ex, ConfigValueError):
-                missing_env_variables.append(ex.instruction)
+                missing_env_variables.add(ex.instruction)
             elif isinstance(ex, ConfigMissingError):
-                missing_declarations.append(ex.instruction)
+                missing_declarations.add(ex.instruction)
             elif isinstance(ex, ConfigParseError):
-                parse_errors.append(ex.instruction)
+                parse_errors.add(ex.instruction)
             else:
                 raise RuntimeError(str(ex))
 
