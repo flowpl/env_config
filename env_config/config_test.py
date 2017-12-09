@@ -7,7 +7,7 @@ from validators import email, ValidationFailure
 
 from . import Config, ConfigValueError, parse_str, parse_int, parse_float, parse_str_list, \
     parse_int_list, parse_float_list, parse_bool, parse_bool_list, ConfigParseError, ConfigMissingError, \
-    AggregateConfigError
+    AggregateConfigError, ConfigNotInCurrentTagError
 
 
 def delete_environment_variable(name):
@@ -651,7 +651,7 @@ class ConfigEnvironmentTest(ConfigTestCase):
 
     def test_raise_declare_error_when_getting_a_variable_from_another_environment(self):
         self.config.declare('optional', parse_str(), ('default',), 'other')
-        with self.assertRaises(ConfigValueError):
+        with self.assertRaises(ConfigNotInCurrentTagError):
             self.config.get('optional')
 
     def test_do_not_raise_when_declaring_a_dict_in_another_environment(self):
@@ -659,7 +659,7 @@ class ConfigEnvironmentTest(ConfigTestCase):
 
     def test_raise_declare_error_when_getting_a_dict_from_another_environment(self):
         self.config.declare('optional', {'value': parse_str()}, ('default',), 'other')
-        with self.assertRaises(ConfigValueError):
+        with self.assertRaises(ConfigNotInCurrentTagError):
             self.config.get('optional')
 
     def test_do_not_raise_when_declaring_a_list_in_another_environment(self):
@@ -667,5 +667,5 @@ class ConfigEnvironmentTest(ConfigTestCase):
 
     def test_raise_declare_error_when_getting_a_list_from_another_environment(self):
         self.config.declare('optional', parse_str_list(), ('default',), 'other')
-        with self.assertRaises(ConfigValueError):
+        with self.assertRaises(ConfigNotInCurrentTagError):
             self.config.get('optional')

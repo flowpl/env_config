@@ -110,6 +110,24 @@ class ConfigMissingError(ConfigError):
         return self.message
 
 
+class ConfigNotInCurrentTagError(ConfigError):
+    def __init__(self, key, tag):
+        super().__init__()
+        self.__key = key
+        self.__tag = tag
+
+    @property
+    def key(self):
+        return self.__key
+
+    @property
+    def tag(self):
+        return self.__tag
+
+    def __str__(self):
+        return 'variable is no defined for current tag (variable: {}, tag: {})'.format(self.key, self.tag)
+
+
 class AggregateConfigError(ConfigError):
     def __init__(self, exceptions):
         super().__init__()
@@ -204,7 +222,7 @@ def _parse_dict(prefix, definition, defer_raise, tags, current_tag):
                 exceptions = exceptions + ex
             except BaseException as e:
                 if current_tag not in tags:
-                    result[k] = e
+                    result[k] = ConfigNotInCurrentTagError(k, current_tag)
                 elif defer_raise:
                     exceptions.append(e)
                 else:
@@ -226,6 +244,8 @@ class Config(object):
         declare config options
         :param key: string
         :param definition: Any
+        :param tags: set(str) list of tags that this variable should exist in
+        :param current_tag: str the tag to declare this variable for
         :return: None
         """
         self.__definitions[key] = definition
@@ -237,7 +257,7 @@ class Config(object):
                 self.__parsed_values[key] = definition(key.upper())
             except BaseException as e:
                 if current_tag not in tags:
-                    self.__parsed_values[key] = e
+                    self.__parsed_values[key] = ConfigNotInCurrentTagError(key, current_tag)
                 elif self.__defer_raise:
                     self.__exceptions.append(e)
                 else:
