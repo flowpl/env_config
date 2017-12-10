@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+VARIABLE=123
+#VARIABLE2=123

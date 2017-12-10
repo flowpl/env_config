@@ -1,6 +1,12 @@
 CHANGES
 =======
 
+1.6
+---
+
+* feat: dedicated Error for variables declared in a different tag. closes #3
+* feat: output each error only once. closes #2
+
 1.5.0
 -----
 

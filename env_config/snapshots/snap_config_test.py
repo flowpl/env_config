@@ -28,3 +28,14 @@ ERR_KEY_1_VALUE1: invalid literal for int() with base 10: 'some int value'
 INT_VALUE: invalid literal for int() with base 10: 'some int value'
 
 '''
+
+snapshots['LoadConfigFromFileTest::test_load_bash_file 1'] = '''Errors in config file test/env:
+
+Missing exports:
+export DICT1_VALUE2=[your value here]
+export FIFTH_VARIABLE=[your value here]
+export FOURTH_VARIABLE=[your value here]
+export SIXTH_VARIABLE=[your value here]
+export THIRD_VARIABLE=[your value here]
+
+'''

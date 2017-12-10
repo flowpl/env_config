@@ -2,28 +2,46 @@ from functools import partial
 from os import environ
 
 
-def _load_scalar(parser, default, validator, key):
+def _load_scalar(parser, default, validator, key, file_contents):
     try:
         values = parser(environ[key])
+    except KeyError:
+        try:
+            values = parser(file_contents[key])
+        except KeyError:
+            if not default:
+                raise ConfigValueError(key)
+            return default
+        except BaseException as e:
+            raise ConfigParseError(key, e)
+    except BaseException as e:
+        raise ConfigParseError(key, e)
+
+    try:
         validator(values)
         return values
-    except KeyError:
-        if not default:
-            raise ConfigValueError(key)
-        return default
     except BaseException as e:
         raise ConfigParseError(key, e)
 
 
-def _load_list(parser, default, validator, separator, key):
+def _load_list(parser, default, validator, separator, key, file_contents):
     try:
         values = [parser(value.strip()) for value in environ[key].split(separator)]
+    except KeyError:
+        try:
+            values = [parser(value.strip()) for value in file_contents[key].split(separator)]
+        except KeyError:
+            if not default:
+                raise ConfigValueError(key)
+            return default
+        except BaseException as e:
+            raise ConfigParseError(key, e)
+    except BaseException as e:
+        raise ConfigParseError(key, e)
+
+    try:
         [validator(value) for value in values]
         return values
-    except KeyError:
-        if not default:
-            raise ConfigValueError(key)
-        return default
     except BaseException as e:
         raise ConfigParseError(key, e)
 
@@ -129,13 +147,18 @@ class ConfigNotInCurrentTagError(ConfigError):
 
 
 class AggregateConfigError(ConfigError):
-    def __init__(self, exceptions):
+    def __init__(self, exceptions, filename):
         super().__init__()
         self.__exceptions = exceptions
+        self.__filename = filename
 
     @property
     def exceptions(self):
         return self.__exceptions
+
+    @property
+    def filename(self):
+        return self.__filename
 
     @property
     def message(self):
@@ -152,9 +175,15 @@ class AggregateConfigError(ConfigError):
             else:
                 raise RuntimeError(str(ex))
 
-        result = ''
+        if self.filename:
+            result = 'Errors in config file {}:\n\n'.format(self.filename)
+        else:
+            result = ''
         if len(missing_env_variables) > 0:
-            result += 'Missing environment variables:\n'
+            if self.filename:
+                result += 'Missing exports:\n'
+            else:
+                result += 'Missing environment variables:\n'
             result += '\n'.join(sorted(missing_env_variables)) + '\n\n'
         if len(missing_declarations) > 0:
             result += 'Missing declarations:\n'
@@ -166,6 +195,25 @@ class AggregateConfigError(ConfigError):
 
     def __str__(self):
         return self.message
+
+
+class ConfigFileEmptyError(ConfigError):
+    def __init__(self, file_name):
+        super().__init__()
+        self.__file_name = file_name
+
+    def __str__(self):
+        return 'Config file does not export any variables {}. Check the bash docs on how to export variables.'\
+            .format(self.__file_name)
+
+
+class ConfigFileNotFoundError(ConfigError):
+    def __init__(self, file_name):
+        super().__init__()
+        self.__filename = file_name
+
+    def __str__(self):
+        return 'Config file not found: {}'.format(self.__filename)
 
 
 def parse_int(default=None, validator=lambda x: x):
@@ -207,18 +255,18 @@ def __parse_definition_result(result):
         return result, []
 
 
-def _parse_dict(prefix, definition, defer_raise, tags, current_tag):
+def _parse_dict(prefix, definition, defer_raise, tags, current_tag, file_contents):
     result = {}
     exceptions = []
     for k, v in definition.items():
         variable_name = "{}_{}".format(prefix, k)
         if isinstance(definition[k], dict):
-            result[k], ex = \
-                __parse_definition_result(_parse_dict(variable_name, definition[k], defer_raise, tags, current_tag))
+            result[k], ex = __parse_definition_result(
+                _parse_dict(variable_name, definition[k], defer_raise, tags, current_tag, file_contents))
             exceptions = exceptions + ex
         else:
             try:
-                result[k], ex = __parse_definition_result(definition[k](variable_name.upper()))
+                result[k], ex = __parse_definition_result(definition[k](variable_name.upper(), file_contents))
                 exceptions = exceptions + ex
             except BaseException as e:
                 if current_tag not in tags:
@@ -230,14 +278,36 @@ def _parse_dict(prefix, definition, defer_raise, tags, current_tag):
     return result, exceptions
 
 
+def _read_file(file_name):
+    variable_marker = 'export ' # which variables to load
+    key_value_divider = '='
+    result = {}
+    with open(file_name, 'r') as f:
+        for line in f.readlines():
+            if len(line) == 0 or line[0] == '#' or len(line) < len(variable_marker):
+                continue
+            if line[:len(variable_marker)] == variable_marker:
+                parts = line.replace(variable_marker, '').split(key_value_divider)
+                result[parts[0]] = parts[1].strip('"\'\n')
+    if len(result.keys()) == 0:
+        raise ConfigFileEmptyError(file_name)
+    return result
+
+
 class Config(object):
 
-    def __init__(self, defer_raise=False):
+    def __init__(self, defer_raise=False, tags=None):
         super().__init__()
         self.__parsed_values = {}
         self.__definitions = {}
         self.__exceptions = []
         self.__defer_raise = defer_raise
+        self.__file_contents = {}
+        self.__filename = None
+        if not tags:
+            self.__tags = {}
+        else:
+            self.__tags = tags
 
     def declare(self, key, definition, tags=('default',), current_tag='default'):
         """
@@ -248,13 +318,22 @@ class Config(object):
         :param current_tag: str the tag to declare this variable for
         :return: None
         """
+        if current_tag in tags and current_tag not in self.__file_contents:
+            if current_tag in self.__tags:
+                self.__file_contents[current_tag] = _read_file(self.__tags[current_tag])
+                self.__filename = self.__tags[current_tag]
+            else:
+                self.__file_contents[current_tag] = {}
+        elif current_tag not in self.__tags:
+            self.__file_contents[current_tag] = {}
         self.__definitions[key] = definition
         if isinstance(definition, dict):
-            self.__parsed_values[key], exceptions = _parse_dict(key, definition, self.__defer_raise, tags, current_tag)
+            self.__parsed_values[key], exceptions = \
+                _parse_dict(key, definition, self.__defer_raise, tags, current_tag, self.__file_contents[current_tag])
             self.__exceptions = self.__exceptions + exceptions
         else:
             try:
-                self.__parsed_values[key] = definition(key.upper())
+                self.__parsed_values[key] = definition(key.upper(), self.__file_contents[current_tag])
             except BaseException as e:
                 if current_tag not in tags:
                     self.__parsed_values[key] = ConfigNotInCurrentTagError(key, current_tag)
@@ -287,6 +366,6 @@ class Config(object):
             raise value
 
         if self.__defer_raise and len(self.__exceptions) > 0:
-            raise AggregateConfigError(self.__exceptions)
+            raise AggregateConfigError(self.__exceptions, self.__filename)
 
         return value

@@ -140,7 +140,7 @@ Another example is different processes, for example a web endpoint and a backgro
 
    # config.py
 
-   from env_config import Config parse_str, reload
+   from env_config import Config, parse_str
 
    def declare_config(tag):
       required = ('live', 'test')
@@ -180,3 +180,20 @@ Another example is different processes, for example a web endpoint and a backgro
 
    # raise an error, because the variable is not available in 'test'
    val2 = cfg.get('some_other_value')
+
+
+Loading variables from a file
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+It's possible to load variables declared to a tag from a file.
+
+.. code-block:: python
+
+   from env_config import Config, parse_str
+
+   # set variables declared in the test tag to be loaded from the bash file test.sh
+   config = Config(tags=dict(test='test.sh'))
+   # variable1 is declared in test and the current tag is test. variable1 will be loaded from test.sh
+   config.declare('variable1', parse_int(), ('test',), 'test'))
+   # variable2 is declared in the default tag. variable2 will be ignored because the current tag is test
+   config.declare('variable2', parse_int(), ('default',), 'test')

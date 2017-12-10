@@ -7,7 +7,7 @@ from validators import email, ValidationFailure
 
 from . import Config, ConfigValueError, parse_str, parse_int, parse_float, parse_str_list, \
     parse_int_list, parse_float_list, parse_bool, parse_bool_list, ConfigParseError, ConfigMissingError, \
-    AggregateConfigError, ConfigNotInCurrentTagError
+    AggregateConfigError, ConfigNotInCurrentTagError, ConfigFileNotFoundError, ConfigFileEmptyError
 
 
 def delete_environment_variable(name):
@@ -644,7 +644,7 @@ class ErrorReportingTest(ConfigTestCase, snapshottest.TestCase):
         self.assertMatchSnapshot(str(context.exception))
 
 
-class ConfigEnvironmentTest(ConfigTestCase):
+class ConfigTagsTest(ConfigTestCase):
 
     def test_do_not_raise_when_declaring_a_variable_in_another_environment(self):
         self.config.declare('optional', parse_str(), ('default',), 'other')
@@ -669,3 +669,28 @@ class ConfigEnvironmentTest(ConfigTestCase):
         self.config.declare('optional', parse_str_list(), ('default',), 'other')
         with self.assertRaises(ConfigNotInCurrentTagError):
             self.config.get('optional')
+
+
+class LoadConfigFromFileTest(snapshottest.TestCase):
+    def test_load_bash_file(self):
+        self.config = Config(tags=dict(test='test/env'), defer_raise=True)
+        self.config.declare('first_variable', parse_int(), ('test',), 'test')
+        self.config.declare('second_variable', parse_int(), ('test',), 'test')
+        self.config.declare('third_variable', parse_int(), ('test',), 'test')
+        self.config.declare('fourth_variable', parse_int(), ('test',), 'test')
+        self.config.declare('fifth_variable', parse_int(), ('test',), 'test')
+        self.config.declare('sixth_variable', parse_int(), ('test',), 'test')
+        self.config.declare('dict1', {'value1': parse_int(), 'value2': parse_int()}, ('test',), 'test')
+        with self.assertRaises(AggregateConfigError) as context:
+            self.config.get('first_variable')
+        self.assertMatchSnapshot(str(context.exception))
+
+    def test_raise_error_if_config_file_does_not_exist(self):
+        self.config = Config(tags=dict(test='test/missing'), defer_raise=True)
+        with self.assertRaises(FileNotFoundError):
+            self.config.declare('missing_value', parse_int(), ('test',), 'test')
+
+    def test_raise_error_if_config_file_is_empty(self):
+        self.config = Config(tags=dict(test='test/empty'), defer_raise=True)
+        with self.assertRaises(ConfigFileEmptyError):
+            self.config.declare('variable1', parse_int(), ('test',), 'test')
