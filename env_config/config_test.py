@@ -5,7 +5,7 @@ import snapshottest
 from ddt import ddt, data
 from validators import email, ValidationFailure
 
-from . import Config, ConfigValueError, parse_str, parse_int, parse_float, parse_str_list, \
+from env_config import Config, ConfigValueError, parse_str, parse_int, parse_float, parse_str_list, \
     parse_int_list, parse_float_list, parse_bool, parse_bool_list, ConfigParseError, ConfigMissingError, \
     AggregateConfigError, ConfigNotInCurrentTagError, ConfigFileNotFoundError, ConfigFileEmptyError
 
@@ -60,6 +60,11 @@ class SkalarValuesTest(ConfigTestCase):
         result = self.config.get('key')
         self.assertEqual('default', result)
 
+    def test_string_return_default_when_is_falsy(self):
+        self.config.declare('key', parse_str(''))
+        result = self.config.get('key')
+        self.assertEqual('', result)
+
     def test_string_validator_fails(self):
         environ['KEY'] = 'some_value'
         with self.assertRaises(ConfigParseError):
@@ -83,6 +88,11 @@ class SkalarValuesTest(ConfigTestCase):
         self.config.declare('key', parse_int(89))
         result = self.config.get('key')
         self.assertEqual(89, result)
+
+    def test_int_return_default_when_is_falsy(self):
+        self.config.declare('key', parse_int(0))
+        result = self.config.get('key')
+        self.assertEqual(0, result)
 
     def test_int_validator_fails(self):
         environ['KEY'] = '13'
@@ -113,6 +123,11 @@ class SkalarValuesTest(ConfigTestCase):
         self.config.declare('key', parse_float(1.4))
         result = self.config.get('key')
         self.assertEqual(1.4, result)
+
+    def test_float_return_default_when_is_falsy(self):
+        self.config.declare('key', parse_float(0))
+        result = self.config.get('key')
+        self.assertEqual(0, result)
 
     def test_float_validator_fails(self):
         environ['KEY'] = '1.4'
@@ -154,6 +169,11 @@ class SkalarValuesTest(ConfigTestCase):
         self.config.declare('key', parse_bool(True))
         result = self.config.get('key')
         self.assertEqual(True, result)
+
+    def test_bool_return_default_when_is_false(self):
+        self.config.declare('key', parse_bool(False))
+        result = self.config.get('key')
+        self.assertEqual(False, result)
 
     def test_bool_validator_fails(self):
         environ['KEY'] = 'true'
@@ -205,6 +225,12 @@ class ListValuesTest(ConfigTestCase):
         result = self.config.get('key')
         self.assertEqual(default_value, result)
 
+    def test_string_list_return_default_when_falsy(self):
+        default_value = []
+        self.config.declare('key', parse_str_list(default_value))
+        result = self.config.get('key')
+        self.assertEqual(default_value, result)
+
     def test_string_list_validator_fails(self):
         environ['KEY'] = 'true,false'
         with self.assertRaises(ConfigParseError) as context:
@@ -244,6 +270,12 @@ class ListValuesTest(ConfigTestCase):
 
     def test_int_list_return_default(self):
         default_value = [1, 4, 7]
+        self.config.declare('key', parse_int_list(default_value))
+        result = self.config.get('key')
+        self.assertEqual(default_value, result)
+
+    def test_int_list_return_default_when_falsy(self):
+        default_value = []
         self.config.declare('key', parse_int_list(default_value))
         result = self.config.get('key')
         self.assertEqual(default_value, result)
@@ -302,6 +334,12 @@ class ListValuesTest(ConfigTestCase):
         result = self.config.get('key')
         self.assertEqual(default_value, result)
 
+    def test_float_list_return_default_when_falsy(self):
+        default_value = []
+        self.config.declare('key', parse_float_list(default_value))
+        result = self.config.get('key')
+        self.assertEqual(default_value, result)
+
     def test_float_list_different_separator(self):
         environ['KEY'] = '1.4-4.3-9.56'
         self.config.declare('key', parse_float_list(separator='-'))
@@ -351,6 +389,12 @@ class ListValuesTest(ConfigTestCase):
 
     def test_bool_list_return_default(self):
         default_value = [True, True]
+        self.config.declare('key', parse_bool_list(default_value))
+        result = self.config.get('key')
+        self.assertEqual(default_value, result)
+
+    def test_bool_list_return_default_when_falsy(self):
+        default_value = []
         self.config.declare('key', parse_bool_list(default_value))
         result = self.config.get('key')
         self.assertEqual(default_value, result)
