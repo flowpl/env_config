@@ -1,5 +1,9 @@
+import logging
 from functools import partial
 from os import environ, path, getcwd
+
+
+MODULE_NAME='env_config'
 
 
 def _load_scalar(parser, default, validator, key, file_contents):
@@ -303,6 +307,11 @@ class Config(object):
         self.__filename_variable = filename_variable
         self.__filename = None
         self.__tags = {}
+        self.__logger = logging.getLogger(MODULE_NAME)
+
+    @property
+    def logger(self):
+        return self.__logger
 
     def declare(self, key, definition, tags=('default',), current_tag='default'):
         """
@@ -316,10 +325,18 @@ class Config(object):
         if current_tag in tags and current_tag not in self.__file_contents:
             try:
                 filename = path.join(getcwd(), environ[self.__filename_variable])
-                self.__file_contents = _read_file(filename)
-                self.__filename = filename
+                try:
+                    self.__file_contents = _read_file(filename)
+                    self.__filename = filename
+                except FileNotFoundError as e:
+                    self.logger.warning(
+                        'Config file not found. Ignoring. {{"filename_variable": "{0}", "filename": "{1}"}}'.format(
+                            self.__filename_variable,
+                            e.filename
+                        )
+                    )
             except (KeyError, TypeError):
-                self.__file_contents = {}
+                pass
         elif current_tag not in self.__tags:
             self.__file_contents = {}
         self.__definitions[key] = definition

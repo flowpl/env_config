@@ -1,3 +1,4 @@
+import logging
 from unittest import TestCase
 from os import environ
 
@@ -16,6 +17,26 @@ def delete_environment_variable(name):
         del environ[name]
     except KeyError:
         pass
+
+
+class MockLoggingHandler(logging.Handler):
+    """Mock logging handler to check for expected logs."""
+
+    def __init__(self, *args, **kwargs):
+        self.reset()
+        logging.Handler.__init__(self, *args, **kwargs)
+
+    def emit(self, record):
+        self.messages[record.levelname.lower()].append(record.getMessage())
+
+    def reset(self):
+        self.messages = {
+            'debug': [],
+            'info': [],
+            'warning': [],
+            'error': [],
+            'critical': [],
+        }
 
 
 class ConfigParseErrorTest(TestCase):
@@ -735,11 +756,13 @@ class LoadConfigFromFileTest(snapshottest.TestCase):
         self.assertTrue(re.match(r'^Errors in config file [/\-_A-Za-z0-9]+?/test/env:$', first_line))
         self.assertMatchSnapshot('\n'.join(rest))
 
-    def test_raise_error_if_config_file_does_not_exist(self):
+    def test_dont_raise_if_config_file_does_not_exist(self):
         environ['CONFIG_FILE'] = 'test/missing'
         self.config = Config(filename_variable='CONFIG_FILE')
-        with self.assertRaises(FileNotFoundError):
+        with self.assertLogs(logger=self.config.logger, level='WARNING') as context:
             self.config.declare('missing_value', parse_int(), ('test',), 'test')
+
+        self.assertIn('Config file not found', context[1][0])
 
     def test_raise_error_if_config_file_is_empty(self):
         environ['CONFIG_FILE'] = 'test/empty'
