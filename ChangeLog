@@ -1,6 +1,24 @@
 CHANGES
 =======
 
+1.9.0
+-----
+
+* docs: adds an index to Examples
+* docs: update README.rst
+* feat: set defer\_raise to True by default
+* feat: simplify load from file
+
+1.8.0
+-----
+
+* fix: allow falsy values to be used as defaults
+
+1.7.0
+-----
+
+* feat: load variables from a file
+
 1.6
 ---
 
