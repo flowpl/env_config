@@ -1,5 +1,5 @@
 from functools import partial
-from os import environ
+from os import environ, path, getcwd
 
 
 def _load_scalar(parser, default, validator, key, file_contents):
@@ -207,15 +207,6 @@ class ConfigFileEmptyError(ConfigError):
             .format(self.__file_name)
 
 
-class ConfigFileNotFoundError(ConfigError):
-    def __init__(self, file_name):
-        super().__init__()
-        self.__filename = file_name
-
-    def __str__(self):
-        return 'Config file not found: {}'.format(self.__filename)
-
-
 def parse_int(default=None, validator=lambda x: x):
     return partial(_load_scalar, int, default, validator)
 
@@ -278,11 +269,11 @@ def _parse_dict(prefix, definition, defer_raise, tags, current_tag, file_content
     return result, exceptions
 
 
-def _read_file(file_name):
+def _read_file(filename):
     variable_marker = 'export ' # which variables to load
     key_value_divider = '='
     result = {}
-    with open(file_name, 'r') as f:
+    with open(filename, 'r') as f:
         for line in f.readlines():
             if len(line) == 0 or line[0] == '#' or len(line) < len(variable_marker):
                 continue
@@ -290,24 +281,28 @@ def _read_file(file_name):
                 parts = line.replace(variable_marker, '').split(key_value_divider)
                 result[parts[0]] = parts[1].strip('"\'\n')
     if len(result.keys()) == 0:
-        raise ConfigFileEmptyError(file_name)
+        raise ConfigFileEmptyError(filename)
     return result
 
 
 class Config(object):
 
-    def __init__(self, defer_raise=False, tags=None):
+    def __init__(self, defer_raise=False, filename_variable=None):
+        """
+        Create a new Config object
+
+        :param defer_raise: bool Whether to show errors as an aggregated report or fail on the first error found.
+        :param filename_variable: str The variable name from which to get the file name
+        """
         super().__init__()
         self.__parsed_values = {}
         self.__definitions = {}
         self.__exceptions = []
         self.__defer_raise = defer_raise
         self.__file_contents = {}
+        self.__filename_variable = filename_variable
         self.__filename = None
-        if not tags:
-            self.__tags = {}
-        else:
-            self.__tags = tags
+        self.__tags = {}
 
     def declare(self, key, definition, tags=('default',), current_tag='default'):
         """
@@ -319,21 +314,22 @@ class Config(object):
         :return: None
         """
         if current_tag in tags and current_tag not in self.__file_contents:
-            if current_tag in self.__tags:
-                self.__file_contents[current_tag] = _read_file(self.__tags[current_tag])
-                self.__filename = self.__tags[current_tag]
-            else:
-                self.__file_contents[current_tag] = {}
+            try:
+                filename = path.join(getcwd(), environ[self.__filename_variable])
+                self.__file_contents = _read_file(filename)
+                self.__filename = filename
+            except (KeyError, TypeError):
+                self.__file_contents = {}
         elif current_tag not in self.__tags:
-            self.__file_contents[current_tag] = {}
+            self.__file_contents = {}
         self.__definitions[key] = definition
         if isinstance(definition, dict):
             self.__parsed_values[key], exceptions = \
-                _parse_dict(key, definition, self.__defer_raise, tags, current_tag, self.__file_contents[current_tag])
+                _parse_dict(key, definition, self.__defer_raise, tags, current_tag, self.__file_contents)
             self.__exceptions = self.__exceptions + exceptions
         else:
             try:
-                self.__parsed_values[key] = definition(key.upper(), self.__file_contents[current_tag])
+                self.__parsed_values[key] = definition(key.upper(), self.__file_contents)
             except BaseException as e:
                 if current_tag not in tags:
                     self.__parsed_values[key] = ConfigNotInCurrentTagError(key, current_tag)

@@ -29,8 +29,7 @@ INT_VALUE: invalid literal for int() with base 10: 'some int value'
 
 '''
 
-snapshots['LoadConfigFromFileTest::test_load_bash_file 1'] = '''Errors in config file test/env:
-
+snapshots['LoadConfigFromFileTest::test_load_bash_file 1'] = '''
 Missing exports:
 export DICT1_VALUE2=[your value here]
 export FIFTH_VARIABLE=[your value here]

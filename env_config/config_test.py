@@ -1,13 +1,14 @@
 from unittest import TestCase
 from os import environ
 
+import re
 import snapshottest
 from ddt import ddt, data
 from validators import email, ValidationFailure
 
 from . import Config, ConfigValueError, parse_str, parse_int, parse_float, parse_str_list, \
     parse_int_list, parse_float_list, parse_bool, parse_bool_list, ConfigParseError, ConfigMissingError, \
-    AggregateConfigError, ConfigNotInCurrentTagError, ConfigFileNotFoundError, ConfigFileEmptyError
+    AggregateConfigError, ConfigNotInCurrentTagError, ConfigFileEmptyError
 
 
 def delete_environment_variable(name):
@@ -38,7 +39,7 @@ class ConfigValueErrorTest(TestCase):
 class ConfigTestCase(TestCase):
     def setUp(self):
         super().setUp()
-        self.config = Config()
+        self.config = Config(defer_raise=False)
         delete_environment_variable('KEY')
 
 
@@ -673,7 +674,8 @@ class ConfigTagsTest(ConfigTestCase):
 
 class LoadConfigFromFileTest(snapshottest.TestCase):
     def test_load_bash_file(self):
-        self.config = Config(tags=dict(test='test/env'), defer_raise=True)
+        environ['CONFIG_FILE'] = 'test/env'
+        self.config = Config(filename_variable='CONFIG_FILE', defer_raise=True)
         self.config.declare('first_variable', parse_int(), ('test',), 'test')
         self.config.declare('second_variable', parse_int(), ('test',), 'test')
         self.config.declare('third_variable', parse_int(), ('test',), 'test')
@@ -683,14 +685,24 @@ class LoadConfigFromFileTest(snapshottest.TestCase):
         self.config.declare('dict1', {'value1': parse_int(), 'value2': parse_int()}, ('test',), 'test')
         with self.assertRaises(AggregateConfigError) as context:
             self.config.get('first_variable')
-        self.assertMatchSnapshot(str(context.exception))
+
+        first_line, *rest = str(context.exception).split('\n')
+        # the absolute path to the config file varies depending on environment. It's not suitable for snapshot testing.
+        self.assertTrue(re.match(r'^Errors in config file [/\-_A-Za-z0-9]+?/test/env:$', first_line))
+        self.assertMatchSnapshot('\n'.join(rest))
 
     def test_raise_error_if_config_file_does_not_exist(self):
-        self.config = Config(tags=dict(test='test/missing'), defer_raise=True)
+        environ['CONFIG_FILE'] = 'test/missing'
+        self.config = Config(filename_variable='CONFIG_FILE')
         with self.assertRaises(FileNotFoundError):
             self.config.declare('missing_value', parse_int(), ('test',), 'test')
 
     def test_raise_error_if_config_file_is_empty(self):
-        self.config = Config(tags=dict(test='test/empty'), defer_raise=True)
+        environ['CONFIG_FILE'] = 'test/empty'
+        self.config = Config(filename_variable='CONFIG_FILE')
         with self.assertRaises(ConfigFileEmptyError):
             self.config.declare('variable1', parse_int(), ('test',), 'test')
+
+    def test_dont_raise_error_if_filename_variable_does_not_exist(self):
+        self.config = Config(filename_variable='MISSING_VARIABLE', defer_raise=True)
+        self.config.declare('variable1', parse_int(), ('test',), 'test')
