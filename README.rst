@@ -46,6 +46,15 @@ Install
 Examples
 --------
 
+* `Create a new Config instance`_
+* `Declare and load scalar values`_
+* `Declare and load list values`_
+* `Declare and load nested values`_
+* `Add validation`_
+* `Reloading configuration at runtime`_
+* `Declaring optional variables`_
+* `Loading variables from a file`_
+
 
 Create a new Config instance
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
