@@ -9,7 +9,7 @@ def _load_scalar(parser, default, validator, key, file_contents):
         try:
             values = parser(file_contents[key])
         except KeyError:
-            if not default:
+            if default is None:
                 raise ConfigValueError(key)
             return default
         except BaseException as e:
@@ -31,7 +31,7 @@ def _load_list(parser, default, validator, separator, key, file_contents):
         try:
             values = [parser(value.strip()) for value in file_contents[key].split(separator)]
         except KeyError:
-            if not default:
+            if default is None:
                 raise ConfigValueError(key)
             return default
         except BaseException as e:
