@@ -675,7 +675,7 @@ class ConfigTagsTest(ConfigTestCase):
 class LoadConfigFromFileTest(snapshottest.TestCase):
     def test_load_bash_file(self):
         environ['CONFIG_FILE'] = 'test/env'
-        self.config = Config(filename_variable='CONFIG_FILE', defer_raise=True)
+        self.config = Config(filename_variable='CONFIG_FILE')
         self.config.declare('first_variable', parse_int(), ('test',), 'test')
         self.config.declare('second_variable', parse_int(), ('test',), 'test')
         self.config.declare('third_variable', parse_int(), ('test',), 'test')
@@ -704,5 +704,5 @@ class LoadConfigFromFileTest(snapshottest.TestCase):
             self.config.declare('variable1', parse_int(), ('test',), 'test')
 
     def test_dont_raise_error_if_filename_variable_does_not_exist(self):
-        self.config = Config(filename_variable='MISSING_VARIABLE', defer_raise=True)
+        self.config = Config(filename_variable='MISSING_VARIABLE')
         self.config.declare('variable1', parse_int(), ('test',), 'test')

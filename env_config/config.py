@@ -287,7 +287,7 @@ def _read_file(filename):
 
 class Config(object):
 
-    def __init__(self, defer_raise=False, filename_variable=None):
+    def __init__(self, defer_raise=True, filename_variable=None):
         """
         Create a new Config object
 
