@@ -5,6 +5,14 @@ from os import environ, path, getcwd
 
 MODULE_NAME='env_config'
 
+LOG_LEVEL_DEFINITIONS = {
+    "debug": logging.DEBUG,
+    "info": logging.INFO,
+    "warning": logging.WARNING,
+    "error": logging.ERROR,
+    "critical": logging.CRITICAL,
+}
+
 
 def _load_scalar(parser, default, validator, key, file_contents):
     try:
@@ -310,6 +318,7 @@ class Config(object):
         self.__namespace = namespace
         self.__tags = {}
         self.__logger = logging.getLogger(MODULE_NAME)
+        self.__log_parsing_active = False
 
     @property
     def logger(self):
@@ -360,9 +369,43 @@ class Config(object):
                 else:
                     raise e
 
+    def apply_log_levels(self):
+        self.__log_parsing_active = True
+        logger = None
+        log_level_prefix = self.__add_namespace('LOG_LEVEL')
+
+        for key in [key for key in environ if key.startswith(log_level_prefix)]:
+            log_levels = environ[key]
+            logger_name = key[len(log_level_prefix) + 1:].lower()
+            try:
+                if logger_name == '':
+                    logger = logging.getLogger()
+                else:
+                    logger = logging.Logger.manager.loggerDict[logger_name]
+            except KeyError:
+                ex = ConfigError('logger does not exist: {}'.format(logger_name))
+                if self.__defer_raise:
+                    self.__exceptions.append(ex)
+                else:
+                    raise ex
+
+            if logger:
+                try:
+                    python_log_level = LOG_LEVEL_DEFINITIONS[log_levels.lower()]
+                    logger.setLevel(python_log_level)
+                except KeyError:
+                    ex = ConfigMissingError(self.__remove_namespace('LOG_LEVELS'))
+                    if self.__defer_raise:
+                        self.__exceptions.append(ex)
+                    else:
+                        raise ex
+
+
     def reload(self):
         for key, definition in self.__definitions.items():
             self.declare(key, definition)
+        if self.__log_parsing_active:
+            self.apply_log_levels()
 
     def get(self, key):
         key = self.__add_namespace(key)
@@ -397,3 +440,4 @@ class Config(object):
     def __remove_namespace(self, key):
         if self.__namespace and key.startswith(self.__namespace + '_'):
             return key[len(self.__namespace) + 1:]
+        return key

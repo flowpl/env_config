@@ -47,6 +47,7 @@ Examples
 --------
 
 * `Create a new Config instance`_
+* `Configure log levels`_
 * `Declare and load scalar values`_
 * `Declare and load list values`_
 * `Declare and load nested values`_
@@ -73,6 +74,37 @@ Create a new Config instance
 
    # load config from a file. See a more detailed example further down.
    cfg = Config(filename_variable='CONFIG_FILE')
+
+
+Configure log levels
+^^^^^^^^^^^^^^^^^^^^
+
+env_config has a simple mechanism to set log levels for python logging, including all configured loggers.
+The library searches for environment variables that are build following this schema:
+`LOG_LEVEL_{logger_name.upper}`
+If found the values of each variable is applied as the log_level for the respective logger.
+The environment variable `LOG_LEVEL` (without a logger name) set the log level for the root logger.
+
+the available values are:
+- debug
+- info
+- warning
+- error
+- critical
+
+
+.. code-block:: python
+
+   import os
+   from env_config import
+
+   os.environ['LOG_LEVEL'] = 'info'  # set the root logger to logging.INFO
+   os.environ['LOG_LEVEL_URLLIB3'] = 'critical'  # set the urllib3 logger to logging.CRITICAL
+   os.environ['LOG_LEVEL_PARAMIKO.TRANSPORT'] = 'debug'  # set paramiko.transport to logging.DEBUG
+
+   cfg = Config()
+   cfg.apply_log_levels()  # read the environment variables and apply to the respective log levels
+
 
 
 Declare and load scalar values

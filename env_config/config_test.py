@@ -1,6 +1,8 @@
 import logging
+from time import sleep
 from unittest import TestCase
 from os import environ
+from testfixtures import LogCapture
 
 import re
 import snapshottest
@@ -9,7 +11,7 @@ from validators import email, ValidationFailure
 
 from env_config import Config, ConfigValueError, parse_str, parse_int, parse_float, parse_str_list, \
     parse_int_list, parse_float_list, parse_bool, parse_bool_list, ConfigParseError, ConfigMissingError, \
-    AggregateConfigError, ConfigNotInCurrentTagError, ConfigFileEmptyError
+    AggregateConfigError, ConfigNotInCurrentTagError, ConfigFileEmptyError, ConfigError
 
 
 def delete_environment_variable(name):
@@ -17,26 +19,6 @@ def delete_environment_variable(name):
         del environ[name]
     except KeyError:
         pass
-
-
-class MockLoggingHandler(logging.Handler):
-    """Mock logging handler to check for expected logs."""
-
-    def __init__(self, *args, **kwargs):
-        self.reset()
-        logging.Handler.__init__(self, *args, **kwargs)
-
-    def emit(self, record):
-        self.messages[record.levelname.lower()].append(record.getMessage())
-
-    def reset(self):
-        self.messages = {
-            'debug': [],
-            'info': [],
-            'warning': [],
-            'error': [],
-            'critical': [],
-        }
 
 
 class ConfigParseErrorTest(TestCase):
@@ -58,10 +40,18 @@ class ConfigValueErrorTest(TestCase):
 
 
 class ConfigTestCase(TestCase):
+    namespace = 'namespace'
+    log_level_prefix = 'LOG_LEVEL'
+
     def setUp(self):
         super().setUp()
         self.config = Config(defer_raise=False)
         delete_environment_variable('KEY')
+        for key in list(environ.keys()):
+            if key.startswith(self.namespace.upper()):
+                del environ[key]
+            if key.startswith(self.log_level_prefix):
+                del environ[key]
 
 
 @ddt
@@ -737,7 +727,7 @@ class ConfigTagsTest(ConfigTestCase):
             self.config.get('optional')
 
 
-class LoadConfigFromFileTest(snapshottest.TestCase):
+class LoadConfigFromFileTest(ConfigTestCase, snapshottest.TestCase):
     def test_load_bash_file(self):
         environ['CONFIG_FILE'] = 'test/env'
         self.config = Config(filename_variable='CONFIG_FILE')
@@ -775,18 +765,7 @@ class LoadConfigFromFileTest(snapshottest.TestCase):
         self.config.declare('variable1', parse_int(), ('test',), 'test')
 
 
-class NamespaceTest(snapshottest.TestCase):
-    namespace = 'namespace'
-
-    def setUp(self):
-        super().setUp()
-        try:
-            del environ['KEY']
-        except:
-            pass
-        for key in list(environ.keys()):
-            if key.startswith(self.namespace.upper()):
-                del environ[key]
+class NamespaceTest(ConfigTestCase, snapshottest.TestCase):
 
     def test_load_prefixed_environment_variable(self):
         environ['NAMESPACE_KEY'] = '14'
@@ -822,4 +801,37 @@ class NamespaceTest(snapshottest.TestCase):
         with self.assertRaises(ConfigMissingError) as context:
             config.get('key')
 
+        self.assertMatchSnapshot(str(context.exception))
+
+
+class LoggerConfigTest(ConfigTestCase, snapshottest.TestCase):
+    def test_set_main_logger_to_warning(self):
+        environ['LOG_LEVEL'] = 'WArNInG'
+        self.config.apply_log_levels()
+
+        logger = logging.getLogger()
+        log_level = logging.getLevelName(logger.getEffectiveLevel())
+        self.assertEqual('WARNING', log_level)
+
+    def test_set_log_level_for_multiple_loggers(self):
+        # import these modules to make their loggers become available
+        import asyncio
+        import concurrent.futures
+        environ['LOG_LEVEL_ASYNCIO'] = 'INFO'
+        environ['LOG_LEVEL_CONCURRENT.FUTURES'] = 'INFO'
+        self.config.apply_log_levels()
+
+        asyncio_logger = logging.getLogger('asyncio')
+        asyncio_level = logging.getLevelName(asyncio_logger.getEffectiveLevel())
+
+        futures_logger = logging.getLogger('concurrent.futures')
+        futures_level = logging.getLevelName(futures_logger.getEffectiveLevel())
+
+        self.assertEqual(asyncio_level, 'INFO')
+        self.assertEqual(futures_level, 'INFO')
+
+    def test_raise_config_error_when_logger_does_not_exist(self):
+        environ['LOG_LEVEL_MISSING'] = 'WArNInG'
+        with self.assertRaises(ConfigError) as context:
+            self.config.apply_log_levels()
         self.assertMatchSnapshot(str(context.exception))
