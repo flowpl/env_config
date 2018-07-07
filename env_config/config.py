@@ -291,12 +291,13 @@ def _read_file(filename):
 
 class Config(object):
 
-    def __init__(self, defer_raise=True, filename_variable=None):
+    def __init__(self, defer_raise=True, filename_variable=None, namespace=''):
         """
         Create a new Config object
 
         :param defer_raise: bool Whether to show errors as an aggregated report or fail on the first error found.
         :param filename_variable: str The variable name from which to get the file name
+        :param namespace: str all environment variables are prefixed with this string
         """
         super().__init__()
         self.__parsed_values = {}
@@ -306,6 +307,7 @@ class Config(object):
         self.__file_contents = {}
         self.__filename_variable = filename_variable
         self.__filename = None
+        self.__namespace = namespace
         self.__tags = {}
         self.__logger = logging.getLogger(MODULE_NAME)
 
@@ -322,6 +324,9 @@ class Config(object):
         :param current_tag: str the tag to declare this variable for
         :return: None
         """
+
+        key = self.__add_namespace(key)
+
         if current_tag in tags and current_tag not in self.__file_contents:
             try:
                 filename = path.join(getcwd(), environ[self.__filename_variable])
@@ -360,11 +365,12 @@ class Config(object):
             self.declare(key, definition)
 
     def get(self, key):
+        key = self.__add_namespace(key)
         value = None
         try:
             value = self.__parsed_values[key]
         except KeyError:
-            ex = ConfigMissingError(key)
+            ex = ConfigMissingError(self.__remove_namespace(key))
             if self.__defer_raise:
                 self.__exceptions.append(ex)
             else:
@@ -382,3 +388,12 @@ class Config(object):
             raise AggregateConfigError(self.__exceptions, self.__filename)
 
         return value
+
+    def __add_namespace(self, key):
+        if self.__namespace:
+            return '{}_{}'.format(self.__namespace, key)
+        return key
+
+    def __remove_namespace(self, key):
+        if self.__namespace and key.startswith(self.__namespace + '_'):
+            return key[len(self.__namespace) + 1:]

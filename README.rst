@@ -50,6 +50,7 @@ Examples
 * `Declare and load scalar values`_
 * `Declare and load list values`_
 * `Declare and load nested values`_
+* `Namespace your variables`_
 * `Add validation`_
 * `Reloading configuration at runtime`_
 * `Declaring optional variables`_
@@ -147,6 +148,20 @@ Nested values help reduce boilerplate necessary to wire configuration with the l
    psyco_config = cfg.get('database')
    # the dict will look like this: {'dbname': 'some value', 'user': 'username', 'password': 'vsjkfl'}
    psyco_connection = psycopg2.connect(**psyco_config)
+
+
+Namespace your variables
+^^^^^^^^^^^^^^^^^^^^^^^^
+.. code-block:: python
+
+   from env_config import Config, parse_str
+   import psycopg2
+
+   cfg = Config(namespace='my_prefix')
+   cfg.declare('database')
+
+   # the value will be loaded from the environment variable: MY_PREFIX_DATABASE
+   value = cfg.get('database')
 
 
 Add validation

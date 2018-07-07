@@ -773,3 +773,53 @@ class LoadConfigFromFileTest(snapshottest.TestCase):
     def test_dont_raise_error_if_filename_variable_does_not_exist(self):
         self.config = Config(filename_variable='MISSING_VARIABLE')
         self.config.declare('variable1', parse_int(), ('test',), 'test')
+
+
+class NamespaceTest(snapshottest.TestCase):
+    namespace = 'namespace'
+
+    def setUp(self):
+        super().setUp()
+        try:
+            del environ['KEY']
+        except:
+            pass
+        for key in list(environ.keys()):
+            if key.startswith(self.namespace.upper()):
+                del environ[key]
+
+    def test_load_prefixed_environment_variable(self):
+        environ['NAMESPACE_KEY'] = '14'
+        config = Config(namespace='namespace')
+        config.declare('key', parse_int())
+        self.assertEqual(14, config.get('key'))
+
+    def test_load_prefixed_nested_variable(self):
+        environ['NAMESPACE_KEY1_KEY2'] = '14'
+        environ['NAMESPACE_KEY1_KEY3'] = '25'
+        config = Config(namespace='namespace')
+        config.declare(
+            'key1',
+            {
+                'key2': parse_int(),
+                'key3': parse_int(),
+            }
+        )
+        self.assertEqual(14, config.get('key1').get('key2'))
+        self.assertEqual(25, config.get('key1').get('key3'))
+
+    def test_raise_config_value_error_when_prefixed_variable_does_not_exist(self):
+        environ['KEY'] = '14'
+        config = Config(namespace='namespace', defer_raise=False)
+        with self.assertRaises(ConfigValueError) as context:
+            config.declare('key', parse_int())
+
+        self.assertMatchSnapshot(str(context.exception))
+
+    def test_raise_confic_missing_error_when_prefixed_variable_is_not_declared(self):
+        environ['KEY'] = '14'
+        config = Config(namespace='namespace', defer_raise=False)
+        with self.assertRaises(ConfigMissingError) as context:
+            config.get('key')
+
+        self.assertMatchSnapshot(str(context.exception))

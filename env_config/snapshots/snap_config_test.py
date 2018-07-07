@@ -38,3 +38,9 @@ export SIXTH_VARIABLE=[your value here]
 export THIRD_VARIABLE=[your value here]
 
 '''
+
+snapshots['NamespaceTest::test_raise_config_value_error_when_prefixed_variable_does_not_exist 1'] = "environment variable 'NAMESPACE_KEY' is missing"
+
+snapshots['NamespaceTest::test_raise_confiv_missing_error_when_prefixed_variable_is_not_declared 1'] = 'Config setting could not be found, call declare("key", [your definition here]) before accessing it.'
+
+snapshots['NamespaceTest::test_raise_confic_missing_error_when_prefixed_variable_is_not_declared 1'] = 'Config setting could not be found, call declare("key", [your definition here]) before accessing it.'
